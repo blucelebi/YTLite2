@@ -44,8 +44,7 @@ extension WatchViewController: VideoPlayerViewDelegate {
             return
         }
         let frameInWindow = playerView.convert(
-            playerView.bounds,
-            to: window
+            playerView.bounds, to: window
         )
         fullscreenSnapshot = (
             superview: playerView.superview ?? view,
@@ -226,9 +225,7 @@ extension WatchViewController: VideoPlayerViewDelegate {
         )
     }
 
-    func qualityLabel(
-        for format: DashFormatInfo
-    ) -> String {
+    func qualityLabel(for format: DashFormatInfo) -> String {
         guard let height = format.height else {
             return "itag \(format.itag)"
         }
@@ -251,11 +248,15 @@ extension WatchViewController {
             return
         }
         let frameInWindow = playerView.convert(playerView.bounds, to: window)
-        fullscreenSnapshot = (superview: playerView.superview ?? view, frame: playerView.frame)
+        if fullscreenSnapshot == nil {
+            fullscreenSnapshot = (
+                superview: playerView.superview ?? view,
+                frame: playerView.frame
+            )
+        }
         isLandscapeFullscreen = true
         setNeedsStatusBarAppearanceUpdate()
         setNeedsUpdateOfHomeIndicatorAutoHidden()
-
         playerView.removeFromSuperview()
         playerView.translatesAutoresizingMaskIntoConstraints = true
         playerView.autoresizingMask = []

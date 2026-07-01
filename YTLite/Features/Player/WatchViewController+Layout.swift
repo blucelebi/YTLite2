@@ -351,8 +351,11 @@ extension WatchViewController {
         guard let playerView = videoPlayerView else {
             return
         }
-        if orientation.isLandscape, fullscreenSnapshot == nil {
-            enterLandscapeFullscreen(playerView: playerView, orientation: orientation)
+        if orientation.isLandscape, !isLandscapeFullscreen {
+            enterLandscapeFullscreen(
+                playerView: playerView,
+                orientation: orientation
+            )
         } else if orientation == .portrait, isLandscapeFullscreen {
             exitLandscapeFullscreen(playerView: playerView)
         }
