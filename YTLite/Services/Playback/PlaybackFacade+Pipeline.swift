@@ -51,13 +51,6 @@ extension PlaybackFacade {
     ) {
         logStartPlayback(info, client: ctx.client)
         notifyCaptionTracks(info.captionTracks)
-        if PlaybackSource.selected == .onesie {
-            startOnesieFallback(
-                info: info,
-                pipelineContext: ctx
-            )
-            return
-        }
         if hasDirectStreams(info) {
             playDirectStream(info, client: ctx.client)
             return
@@ -84,29 +77,6 @@ extension PlaybackFacade {
         DispatchQueue.main.async { [weak self] in
             self?.context?.updateStatusLabel(
                 "Minting WebPO tokens..."
-            )
-        }
-        fetchOnesieBootstrap(
-            info: info,
-            visitorData: visitorData,
-            pipelineContext: ctx
-        )
-    }
-
-    private func startOnesieFallback(
-        info: DirectPlaybackInfo,
-        pipelineContext ctx: PlaybackPipelineContext
-    ) {
-        guard let visitorData = info.visitorData,
-              !visitorData.isEmpty else {
-            context?.showPlaybackError(
-                "Onesie: no visitor data."
-            )
-            return
-        }
-        DispatchQueue.main.async { [weak self] in
-            self?.context?.updateStatusLabel(
-                "Fetching stream via Onesie..."
             )
         }
         fetchOnesieBootstrap(

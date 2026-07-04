@@ -127,18 +127,6 @@ extension WatchViewController {
         resetComments()
         loadComments()
         view.setNeedsLayout()
-        prefetchNextVideoPoToken(page)
-    }
-
-    /// Warm up PoToken for autoplay next video while current is playing
-    private func prefetchNextVideoPoToken(_ page: WatchPage) {
-        guard PlaybackSource.selected == .onesie,
-              let nextId = page.nextVideo?.id else {
-            return
-        }
-        WebPoTokenService.shared.fetchSessionToken(
-            identifier: nextId
-        ) { _ in }
     }
 
     func applyChannelInfo(from page: WatchPage) {

@@ -86,20 +86,64 @@ extension PlaybackFacade {
         cancellationToken: CancellationToken,
         client: DirectPlaybackClient = .androidVR
     ) {
-        let effectiveClient = PlaybackSource.selected == .onesie
-            ? .web : client
         currentVideoId = videoId
         currentApiClient = apiClient
-        activeDirectPlaybackClient = effectiveClient
+        if PlaybackSource.selected == .webViewHLS {
+            startWebViewHLS(
+                videoId: videoId,
+                cancellationToken: cancellationToken
+            )
+            return
+        }
+        activeDirectPlaybackClient = client
         context?.updateStatusLabel("Minting PoToken...")
         fetchPoTokenAndPlay(
             PlaybackPipelineContext(
                 videoId: videoId,
-                client: effectiveClient,
+                client: client,
                 cancellationToken: cancellationToken,
                 apiClient: apiClient
             )
         )
+    }
+
+    /// Resolves a JS-context HLS manifest via URLSession + JSContext n-solving
+    /// and plays it through the n-rewriting proxy.
+    private func startWebViewHLS(
+        videoId: String,
+        cancellationToken: CancellationToken
+    ) {
+        activeDirectPlaybackClient = .web
+        context?.updateStatusLabel("Resolving stream...")
+        HLSStreamResolver.shared.resolve(
+            videoId: videoId
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self,
+                      !cancellationToken.isCancelled else {
+                    return
+                }
+                self.handleResolvedHLS(result)
+            }
+        }
+    }
+
+    private func handleResolvedHLS(
+        _ result: Result<ResolvedHLS, Error>
+    ) {
+        switch result {
+        case .success(let resolved):
+            AppLog.player("webViewHLS: playing via proxy")
+            context?.attachProxiedHLS(
+                manifestURL: resolved.manifestURL,
+                nSolver: resolved.nSolver
+            )
+        case .failure(let error):
+            AppLog.player("webViewHLS failed: \(error)")
+            context?.showPlaybackError(
+                "HLS resolve failed."
+            )
+        }
     }
 
     func reset() {

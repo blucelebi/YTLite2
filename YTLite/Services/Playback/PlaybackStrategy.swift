@@ -7,6 +7,10 @@ import Foundation
 /// WatchViewController conforms to this protocol.
 protocol PlaybackContext: AnyObject {
     func attachPlayer(url: URL)
+    func attachProxiedHLS(
+        manifestURL: URL,
+        nSolver: (unsolved: String, solved: String)?
+    )
     func attachDirectPlayer(
         url: URL,
         visitorData: String?,

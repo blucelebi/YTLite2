@@ -47,6 +47,7 @@ enum UserDefaultsKeys {
 
     enum Debug {
         static let playbackSource = "debug_playbackSource"
+        static let solverEndpoint = "debug_solverEndpoint"
     }
 }
 
@@ -55,7 +56,7 @@ enum UserDefaultsKeys {
 enum PlaybackSource: String, CaseIterable {
     case androidVR = "android_vr"
     case progressive = "progressive"
-    case onesie = "onesie"
+    case webViewHLS = "webview_hls"
 
     static var selected: PlaybackSource {
         let raw = UserDefaults.standard.string(
@@ -71,8 +72,8 @@ enum PlaybackSource: String, CaseIterable {
             return "Android VR (default)"
         case .progressive:
             return "Progressive (360p)"
-        case .onesie:
-            return "TVHTML5 (Onesie)"
+        case .webViewHLS:
+            return "WebView HLS (kids/dubbed)"
         }
     }
 }
