@@ -151,6 +151,12 @@ protocol WatchService: AnyObject {
         videoId: String,
         completion: @escaping (WatchtimeURLs?) -> Void
     )
+    /// Caption tracks via the IOS player client (works where the WEB
+    /// client's timedtext URLs are POT-gated and return empty bodies).
+    func fetchCaptionTracks(
+        videoId: String,
+        completion: @escaping ([SubtitleTrack]) -> Void
+    )
 }
 
 protocol EngagementService: AnyObject {

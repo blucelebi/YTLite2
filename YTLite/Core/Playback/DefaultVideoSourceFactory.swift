@@ -13,7 +13,7 @@ struct DefaultVideoSourceFactory: VideoSourceFactory {
         case .progressive:
             return ProgressiveSource(apiClient: apiClient)
         case .webViewHLS:
-            return WebViewHLSSource()
+            return WebViewHLSSource(apiClient: apiClient)
         }
     }
 }

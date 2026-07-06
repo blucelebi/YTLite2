@@ -17,6 +17,7 @@ final class NowPlayingService {
     private weak var player: AVPlayer?
     private var commandTokens: [(MPRemoteCommand, Any)] = []
     private var artworkURL: URL?
+    private var lastPublishedPosition: TimeInterval = -1
     private let transport: HTTPTransport
 
     private init(transport: HTTPTransport = ServiceContainer.mediaTransport) {
@@ -28,12 +29,20 @@ final class NowPlayingService {
         metadata: NowPlayingMetadata
     ) {
         self.player = player
+        lastPublishedPosition = 0
         publishInfo(metadata: metadata, position: 0)
         registerCommands()
         loadArtwork(url: metadata.artworkURL)
     }
 
     func updatePosition(_ position: TimeInterval) {
+        // The lock screen advances elapsed time by itself from playbackRate;
+        // rewriting the info dict on every 0.1s tick kept iOS 12 from ever
+        // rendering the artwork. Republish only on seeks or notable drift.
+        guard abs(position - lastPublishedPosition) >= 5 else {
+            return
+        }
+        lastPublishedPosition = position
         guard var info = MPNowPlayingInfoCenter.default().nowPlayingInfo else {
             return
         }
@@ -60,7 +69,9 @@ final class NowPlayingService {
             MPMediaItemPropertyArtist: metadata.channelName,
             MPMediaItemPropertyPlaybackDuration: metadata.duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: position,
-            MPNowPlayingInfoPropertyPlaybackRate: player?.rate ?? 1
+            MPNowPlayingInfoPropertyPlaybackRate: player?.rate ?? 1,
+            MPNowPlayingInfoPropertyMediaType:
+                MPNowPlayingInfoMediaType.video.rawValue
         ]
     }
 

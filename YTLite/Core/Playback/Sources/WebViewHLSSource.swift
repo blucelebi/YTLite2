@@ -12,14 +12,16 @@ final class WebViewHLSSource: VideoSource {
     private(set) var currentQuality: VideoQuality?
 
     private let resolver: HLSStreamResolver
+    private let apiClient: WatchService
     private let proxyQueueLabel = "com.ytvlite.hlsproxy"
     private var manifestURL: URL?
     private var nSolver: (unsolved: String, solved: String)?
     private var captions: [SubtitleTrack] = []
     private var activeLoader: HLSProxyLoader?
 
-    init(resolver: HLSStreamResolver = .shared) {
+    init(apiClient: WatchService, resolver: HLSStreamResolver = .shared) {
         self.resolver = resolver
+        self.apiClient = apiClient
     }
 
     /// Parses the multivariant manifest into one quality per resolution height
@@ -69,12 +71,34 @@ final class WebViewHLSSource: VideoSource {
         cancellation: CancellationToken?,
         completion: @escaping (Result<PreparedPlayback, Error>) -> Void
     ) {
-        resolver.resolve(videoId: videoId) { [weak self] result in
-            switch result {
+        // Captions come from the IOS player client in parallel with the
+        // manifest resolve: the WEB timedtext URLs found in the watch HTML
+        // are POT-gated and return empty bodies.
+        let group = DispatchGroup()
+        var innertubeCaptions: [SubtitleTrack] = []
+        var resolveResult: Result<ResolvedHLS, Error> = .failure(
+            HLSStreamResolver.ResolverError.noManifest
+        )
+        group.enter()
+        apiClient.fetchCaptionTracks(videoId: videoId) { tracks in
+            innertubeCaptions = tracks
+            group.leave()
+        }
+        group.enter()
+        resolver.resolve(videoId: videoId) { result in
+            resolveResult = result
+            group.leave()
+        }
+        group.notify(queue: .global()) { [weak self] in
+            switch resolveResult {
             case .failure(let error):
                 completion(.failure(error))
             case .success(let resolved):
-                self?.handleResolved(resolved, completion: completion)
+                self?.handleResolved(
+                    resolved,
+                    innertubeCaptions: innertubeCaptions,
+                    completion: completion
+                )
             }
         }
     }
@@ -95,11 +119,14 @@ final class WebViewHLSSource: VideoSource {
 
     private func handleResolved(
         _ resolved: ResolvedHLS,
+        innertubeCaptions: [SubtitleTrack],
         completion: @escaping (Result<PreparedPlayback, Error>) -> Void
     ) {
         manifestURL = resolved.manifestURL
         nSolver = resolved.nSolver
-        captions = resolved.captions
+        captions = innertubeCaptions.isEmpty
+            ? resolved.captions
+            : innertubeCaptions
         resolver.fetchText(url: resolved.manifestURL) { [weak self] result in
             guard let self else {
                 return

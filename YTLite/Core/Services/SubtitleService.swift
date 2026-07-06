@@ -63,7 +63,25 @@ final class SubtitleService {
             HTTPRequest(method: .get, url: url),
             cancellationToken: nil
         ) { [weak self] result in
-            self?.handleFetchResponse(url: url, data: try? result.get().data)
+            switch result {
+            case .success(let response):
+                if response.status != 200 {
+                    AppLog.player(
+                        "subtitle fetch: HTTP \(response.status)"
+                            + " url=\(url.absoluteString.prefix(120))"
+                    )
+                }
+                self?.handleFetchResponse(
+                    url: url,
+                    data: response.data
+                )
+            case .failure(let error):
+                AppLog.player(
+                    "subtitle fetch failed: \(error)"
+                        + " url=\(url.absoluteString.prefix(120))"
+                )
+                self?.handleFetchResponse(url: url, data: nil)
+            }
         }
     }
 
@@ -75,6 +93,13 @@ final class SubtitleService {
         if let data,
            let text = String(data: data, encoding: .utf8) {
             cues = VTTParser.parse(text)
+            if cues.isEmpty && !text.isEmpty {
+                let preview = String(text.prefix(200))
+                AppLog.player(
+                    "subtitle parse: 0 cues from"
+                        + " \(data.count)b, preview=\(preview)"
+                )
+            }
         } else {
             cues = []
         }

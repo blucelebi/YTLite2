@@ -63,6 +63,11 @@ enum UserAgent {
         "AppleWebKit/605.1.15 (KHTML, like Gecko)",
         "Version/18.0 Safari/605.1.15"
     ].joined(separator: " ")
+
+    /// YouTube iOS app — used for IOS client Innertube requests (captions).
+    static let iosYouTube =
+        "com.google.ios.youtube/20.10.4"
+            + " (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)"
 }
 
 // MARK: - YouTube API credentials

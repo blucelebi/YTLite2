@@ -97,4 +97,21 @@ enum InnertubeContexts {
             ]
         ]
     ]
+
+    /// Official iOS app client. Its timedtext caption URLs are served without
+    /// a proof-of-origin token, unlike the WEB client's.
+    static let ios: [String: Any] = [
+        "context": [
+            "client": [
+                "clientName": "IOS",
+                "clientVersion": "20.10.4",
+                "hl": "en",
+                "deviceMake": "Apple",
+                "deviceModel": "iPhone16,2",
+                "osName": "iPhone",
+                "osVersion": "18.3.2.22D82",
+                "userAgent": UserAgent.iosYouTube
+            ]
+        ]
+    ]
 }

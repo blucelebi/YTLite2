@@ -230,15 +230,17 @@ extension VideoPlayerView {
     }
 
     /// The system auto-starts PiP when the app backgrounds while a video
-    /// layer is fullscreen. PiP here is button-only: drop the controller
-    /// while inactive (unless the user already started PiP) and recreate
-    /// it when the app is active again.
+    /// layer covers the screen. That is wanted only in fullscreen: outside
+    /// it, drop the controller while inactive (unless the user already
+    /// started PiP via the button) and recreate it when active again.
     @objc
     func appWillResignActive() {
         guard pipController?.isPictureInPictureActive != true else {
             return
         }
-        pipController = nil
+        if !isFullscreen {
+            pipController = nil
+        }
     }
 
     @objc

@@ -12,6 +12,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         configureSharedDependencies()
         ThemeManager.shared.applyGlobal()
         BackgroundPlaybackService.apply()
+        application.beginReceivingRemoteControlEvents()
         if ReturnYouTubeDislikeService.enabled {
             ReturnYouTubeDislikeService.shared.prepareIfNeeded()
         }

@@ -191,7 +191,10 @@ extension WatchViewController {
         guard #available(iOS 13.0, *) else {
             return makeTextBarButton(title: fallbackTitle)
         }
-        let cfg = UIImage.SymbolConfiguration(weight: .semibold)
+        // Match the system back indicator's glyph size — a bar item image
+        // renders the symbol at body size (~17pt) otherwise, looking smaller
+        // than the back chevron on every other screen.
+        let cfg = UIImage.SymbolConfiguration(pointSize: 21, weight: .semibold)
         let img = UIImage(
             systemName: systemName,
             withConfiguration: cfg
