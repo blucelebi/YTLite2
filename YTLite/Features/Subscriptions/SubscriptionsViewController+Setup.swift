@@ -114,7 +114,7 @@ extension SubscriptionsViewController {
             )
             return
         }
-        service.fetchNextPage(
+        service.fetchSubscriptionsNextPage(
             continuation: continuation
         ) { [weak self] result in
             DispatchQueue.main.async {

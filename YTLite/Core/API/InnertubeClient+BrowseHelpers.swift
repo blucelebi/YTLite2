@@ -87,15 +87,42 @@ extension InnertubeClient {
         let tabList = twoCols?[JSONKey.tabs]
             as? [[String: Any]] ?? []
         for tab in tabList {
-            guard let slr = tab.digDict(
-                RendererKey.tab,
-                JSONKey.content,
-                RendererKey.sectionList
-            ) else { continue }
+            appendWebTab(
+                tab, videos: &videos, continuation: &continuation
+            )
+        }
+    }
+
+    private static func appendWebTab(
+        _ tab: [String: Any],
+        videos: inout [Video],
+        continuation: inout String?
+    ) {
+        // List layout: sectionListRenderer of dated shelves.
+        if let slr = tab.digDict(
+            RendererKey.tab,
+            JSONKey.content,
+            RendererKey.sectionList
+        ) {
             let page = parseWebSectionList(slr)
             videos.append(contentsOf: page.videos)
             if continuation == nil {
                 continuation = page.continuation
+            }
+            return
+        }
+        // Grid layout (the WEB subscriptions feed): richGridRenderer of
+        // richItemRenderers, newest first.
+        if let rg = tab.digDict(
+            RendererKey.tab,
+            JSONKey.content,
+            RendererKey.richGrid
+        ),
+            let items = rg[JSONKey.contents] as? [[String: Any]] {
+            let parsed = VideoRendererParserChain.parse(items: items)
+            videos.append(contentsOf: parsed.videos)
+            if continuation == nil {
+                continuation = parsed.continuation
             }
         }
     }

@@ -24,6 +24,12 @@ protocol FeedService: AnyObject {
         continuation: String,
         completion: @escaping (Result<FeedPage, Error>) -> Void
     )
+    /// Subscriptions pagination — its continuation tokens come from a
+    /// different client surface than the home feed's.
+    func fetchSubscriptionsNextPage(
+        continuation: String,
+        completion: @escaping (Result<FeedPage, Error>) -> Void
+    )
 }
 
 protocol HistoryService: AnyObject {

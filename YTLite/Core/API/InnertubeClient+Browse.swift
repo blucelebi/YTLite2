@@ -45,6 +45,38 @@ extension InnertubeClient {
         }
     }
 
+    /// The TVHTML5 subscriptions feed switched to a relevance-first layout
+    /// (a "Most relevant" shelf plus per-channel tabs), losing chronological
+    /// order and fresh uploads. The WEB client still serves the feed newest
+    /// first, so subscriptions go through it; the TV browse stays as a
+    /// fallback in case the device-flow token is rejected by the WEB surface.
+    func subscriptionsWebFirst(
+        browseId: String?,
+        continuation: String?,
+        token: String,
+        completion: @escaping (Result<FeedPage, Error>) -> Void
+    ) {
+        executeWebBrowse(
+            browseId: browseId,
+            continuation: continuation,
+            token: token
+        ) { [weak self] result in
+            if case .success(let page) = result, !page.videos.isEmpty {
+                completion(.success(page))
+                return
+            }
+            AppLog.innertube(
+                "subscriptions: web browse empty/failed → TV fallback"
+            )
+            self?.executeBrowse(
+                browseId: browseId,
+                continuation: continuation,
+                token: token,
+                completion: completion
+            )
+        }
+    }
+
     func executeWebBrowse(
         browseId: String?,
         continuation: String?,

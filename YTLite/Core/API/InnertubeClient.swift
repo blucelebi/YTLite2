@@ -27,7 +27,28 @@ extension InnertubeClient {
     }
 
     func fetchSubscriptionFeed(completion: @escaping (Result<FeedPage, Error>) -> Void) {
-        authenticatedBrowse(browseId: BrowseID.subscriptions, completion: completion)
+        withValidToken(completion: completion) { client, token in
+            client.subscriptionsWebFirst(
+                browseId: BrowseID.subscriptions,
+                continuation: nil,
+                token: token,
+                completion: completion
+            )
+        }
+    }
+
+    func fetchSubscriptionsNextPage(
+        continuation: String,
+        completion: @escaping (Result<FeedPage, Error>) -> Void
+    ) {
+        withValidToken(completion: completion) { client, token in
+            client.subscriptionsWebFirst(
+                browseId: nil,
+                continuation: continuation,
+                token: token,
+                completion: completion
+            )
+        }
     }
 
     func fetchHistory(completion: @escaping (Result<FeedPage, Error>) -> Void) {
