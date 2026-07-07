@@ -79,6 +79,18 @@ final class NavChevronButton: UIView {
         CGSize(width: Self.side, height: Self.side)
     }
 
+    // The bar repositions item views by setting frame/center; a move that
+    // doesn't change the size never triggers layoutSubviews, which left a
+    // stale shift baked in. Re-align on every reposition instead — the
+    // alignment only touches `transform`, so this cannot recurse.
+    override var frame: CGRect {
+        didSet { alignToScreenEdge() }
+    }
+
+    override var center: CGPoint {
+        didSet { alignToScreenEdge() }
+    }
+
     init(kind: NavChevron.Kind, target: Any?, action: Selector) {
         super.init(frame: CGRect(x: 0, y: 0, width: Self.side, height: Self.side))
         button.setImage(NavChevron.image(kind: kind), for: .normal)
