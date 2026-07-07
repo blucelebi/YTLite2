@@ -162,13 +162,8 @@ private extension InnertubeClient {
         ] as? [String: Any]
         let tabs = nr?["tabs"]
             as? [[String: Any]] ?? []
-        let titles = tabs.map {
-            ($0["tabRenderer"] as? [String: Any])?
-                .runsText("title") ?? "?"
-        }
-        AppLog.innertube(
-            "subscriptions nav: \(tabs.count) tabs"
-                + " [\(titles.joined(separator: " | "))]"
+        logSubscriptionsNav(
+            sectionCount: sections?.count ?? 0, tabs: tabs
         )
         let tr = tabs.first?["tabRenderer"]
             as? [String: Any]
@@ -180,6 +175,23 @@ private extension InnertubeClient {
             as? [String: Any])?[
                 "sectionListRenderer"
             ] as? [String: Any]
+    }
+
+    static func logSubscriptionsNav(
+        sectionCount: Int,
+        tabs: [[String: Any]]
+    ) {
+        let titles = tabs.map { tab -> String in
+            let tr = tab["tabRenderer"] as? [String: Any]
+            return tr?["title"] as? String
+                ?? tr?.runsText("title")
+                ?? "keys:\((tr ?? [:]).keys.sorted().joined(separator: ","))"
+        }
+        AppLog.innertube(
+            "subscriptions nav: \(sectionCount) sections,"
+                + " \(tabs.count) tabs"
+                + " [\(titles.prefix(8).joined(separator: " | "))…]"
+        )
     }
 
     static func appendSection(
@@ -202,10 +214,11 @@ private extension InnertubeClient {
         }
         let before = videos.count
         appendShelfVideos(from: sc, into: &videos)
+        let title = shelfTitle(shelf) ?? "? header="
+            + (shelf.digDict("headerRenderer")?.keys.sorted() ?? [])
+            .joined(separator: ",")
         AppLog.innertube(
-            "shelf '\(shelfTitle(shelf) ?? "?")':"
-                + " +\(videos.count - before) videos"
-                + " (contentKeys=\(sc.keys.sorted()))"
+            "shelf '\(title)': +\(videos.count - before) videos"
         )
     }
 

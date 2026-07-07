@@ -28,7 +28,7 @@ extension InnertubeClient {
 
     func fetchSubscriptionFeed(completion: @escaping (Result<FeedPage, Error>) -> Void) {
         withValidToken(completion: completion) { client, token in
-            client.subscriptionsWebFirst(
+            client.subscriptionsBrowse(
                 browseId: BrowseID.subscriptions,
                 continuation: nil,
                 token: token,
@@ -42,7 +42,7 @@ extension InnertubeClient {
         completion: @escaping (Result<FeedPage, Error>) -> Void
     ) {
         withValidToken(completion: completion) { client, token in
-            client.subscriptionsWebFirst(
+            client.subscriptionsBrowse(
                 browseId: nil,
                 continuation: continuation,
                 token: token,

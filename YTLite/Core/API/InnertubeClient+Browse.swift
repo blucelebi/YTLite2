@@ -3,6 +3,28 @@ import Foundation
 // MARK: - Browse
 
 extension InnertubeClient {
+    static func sortedByPublishedDate(_ page: FeedPage) -> FeedPage {
+        let dated = page.videos.enumerated().map { entry in
+            (
+                index: entry.offset,
+                video: entry.element,
+                date: entry.element.publishedAt.flatMap {
+                    VideoFormatters.approximateDate(fromRelative: $0)
+                } ?? .distantPast
+            )
+        }
+        // Swift's sort is not guaranteed stable — tiebreak on the original
+        // index so equal (coarse) dates keep the server's relative order.
+        let sorted = dated.sorted {
+            $0.date != $1.date ? $0.date > $1.date : $0.index < $1.index
+        }
+        return FeedPage(
+            videos: sorted.map { $0.video },
+            continuation: page.continuation,
+            channels: page.channels
+        )
+    }
+
     func sendVote(
         endpoint: String,
         videoId: String,
@@ -46,34 +68,22 @@ extension InnertubeClient {
     }
 
     /// The TVHTML5 subscriptions feed switched to a relevance-first layout
-    /// (a "Most relevant" shelf plus per-channel tabs), losing chronological
-    /// order and fresh uploads. The WEB client still serves the feed newest
-    /// first, so subscriptions go through it; the TV browse stays as a
-    /// fallback in case the device-flow token is rejected by the WEB surface.
-    func subscriptionsWebFirst(
+    /// (a "Most relevant" shelf plus per-channel shelves), losing the
+    /// chronological order. The WEB client rejects the device-flow token
+    /// (HTTP 400 precondition), so the order is restored client-side from
+    /// the videos' relative published dates, newest first.
+    func subscriptionsBrowse(
         browseId: String?,
         continuation: String?,
         token: String,
         completion: @escaping (Result<FeedPage, Error>) -> Void
     ) {
-        executeWebBrowse(
+        executeBrowse(
             browseId: browseId,
             continuation: continuation,
             token: token
-        ) { [weak self] result in
-            if case .success(let page) = result, !page.videos.isEmpty {
-                completion(.success(page))
-                return
-            }
-            AppLog.innertube(
-                "subscriptions: web browse empty/failed → TV fallback"
-            )
-            self?.executeBrowse(
-                browseId: browseId,
-                continuation: continuation,
-                token: token,
-                completion: completion
-            )
+        ) { result in
+            completion(result.map(Self.sortedByPublishedDate))
         }
     }
 
