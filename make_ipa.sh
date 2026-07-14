@@ -72,10 +72,12 @@ for dylib in "$APP_PATH/Frameworks/"*.dylib; do
   xcrun bitcode_strip -r "$dylib" -o "$dylib"
 done
 
-# Sign with the exact entitlements every published release has carried (from
-# the local dev signature). Keychain items on jailbroken installs are keyed to
-# application-identifier — changing it would log users out on update. CI builds
-# are unsigned and have no entitlements to preserve, hence the explicit file.
+# Sign with a FIXED application-identifier: keychain items on jailbroken
+# installs are keyed to it, so it must never change between releases (changing
+# it logs every AppSync user out once). It is an arbitrary string for ad-hoc
+# signing — no Apple registration involved — and is intentionally independent
+# of the dev bundle id in Local.xcconfig. Normalized from the accidental
+# "WD55N799QB.…YTLite.test" of 1.4.0/1.4.1 to the main team; frozen since.
 echo "▶ Replacing dev cert with ad-hoc signature..."
 ENTITLEMENTS=$(mktemp).plist
 cat > "$ENTITLEMENTS" <<'EOF'
@@ -84,9 +86,9 @@ cat > "$ENTITLEMENTS" <<'EOF'
 <plist version="1.0">
 <dict>
 	<key>application-identifier</key>
-	<string>WD55N799QB.com.verback.YTLite.test</string>
+	<string>4RAT6786W6.com.verback.YTLite</string>
 	<key>com.apple.developer.team-identifier</key>
-	<string>WD55N799QB</string>
+	<string>4RAT6786W6</string>
 	<key>get-task-allow</key>
 	<true/>
 </dict>

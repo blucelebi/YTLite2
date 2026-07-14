@@ -1,4 +1,8 @@
 // Local build configuration template
-// Copy this file to Local.xcconfig and fill in your values.
+// Copy this file to Local.xcconfig and fill in your values:
+//   PRODUCT_BUNDLE_IDENTIFIER — any id your Apple account can provision
+//                               (the release id is applied by make_ipa.sh)
+//   DEVELOPMENT_TEAM — your Apple developer team id (Xcode: Settings → Accounts)
 
 PRODUCT_BUNDLE_IDENTIFIER = com.example.YourApp
+DEVELOPMENT_TEAM =

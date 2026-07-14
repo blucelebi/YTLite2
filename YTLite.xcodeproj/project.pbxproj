@@ -195,7 +195,6 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = WD55N799QB;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = YTLite/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = YTLite;
@@ -210,7 +209,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.4.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.verback.YTLite.test;
 				PRODUCT_NAME = YTLite;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -231,7 +229,6 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = WD55N799QB;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = YTLite/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = YTLite;
@@ -246,7 +243,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.4.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.verback.YTLite.test;
 				PRODUCT_NAME = YTLite;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
