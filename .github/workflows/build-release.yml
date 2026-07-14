@@ -24,6 +24,20 @@ jobs:
         with:
           fetch-depth: 0 # tags for version computation, full history for build number
 
+      # Match the locally verified toolchain: the image defaults (Xcode 16.4,
+      # SwiftLint 0.65) drift from the project's versions, and the SwiftLint
+      # build phase runs --strict, so a newer linter can fail the build.
+      - name: Pin Xcode 16.2
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Pin SwiftLint 0.63.3
+        run: |
+          curl -sL -o "$RUNNER_TEMP/swiftlint.zip" \
+            https://github.com/realm/SwiftLint/releases/download/0.63.3/portable_swiftlint.zip
+          unzip -oq "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+          sudo install -m 755 "$RUNNER_TEMP/swiftlint/swiftlint" "$(brew --prefix)/bin/swiftlint"
+          swiftlint version
+
       - name: Configure local build settings
         run: cp Config/Local.xcconfig.example Config/Local.xcconfig
 
