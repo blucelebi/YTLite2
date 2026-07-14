@@ -65,4 +65,31 @@ enum AppURLs {
     enum SponsorBlock {
         static let api = "https://sponsor.ajay.app"
     }
+
+    /// Public YouTube search autocomplete (unauthenticated).
+    /// `client=firefox` returns plain JSON: `["<query>", [suggestions]]`.
+    enum Suggest {
+        static let base = "https://suggestqueries.google.com"
+
+        static func searchURL(query: String) -> URL? {
+            var components = URLComponents(
+                string: base + "/complete/search"
+            )
+            var items = [
+                URLQueryItem(name: "client", value: "firefox"),
+                URLQueryItem(name: "ds", value: "yt"),
+                // Without oe the reply charset follows hl
+                // (e.g. windows-1251 for ru) and breaks JSON parsing.
+                URLQueryItem(name: "oe", value: "utf-8"),
+                URLQueryItem(name: "q", value: query)
+            ]
+            if let language = Locale.current.languageCode {
+                items.append(
+                    URLQueryItem(name: "hl", value: language)
+                )
+            }
+            components?.queryItems = items
+            return components?.url
+        }
+    }
 }

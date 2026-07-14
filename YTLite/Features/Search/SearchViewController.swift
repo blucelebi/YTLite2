@@ -7,16 +7,21 @@ class SearchViewController: UIViewController {
         String
     ) -> UIViewController
     let videoRouter: VideoRouter
-    private(set) var results: [Video] = []
-    private var lastQuery: String = ""
-    private var activeSearchQuery: String?
-    private var searchCancellationToken = CancellationToken()
-    private var continuationToken: String?
-    private var isLoadingNextPage = false
+    var results: [Video] = []
+    var lastQuery: String = ""
+    var activeSearchQuery: String?
+    var searchCancellationToken = CancellationToken()
+    var continuationToken: String?
+    var isLoadingNextPage = false
+    var panelMode: PanelMode = .hidden
+    var suggestions: [String] = []
+    var suggestWorkItem: DispatchWorkItem?
+    var suggestToken = CancellationToken()
+    let searchHistory = SearchHistoryStore.shared
 
-    private let searchBar = UISearchBar()
+    let searchBar = UISearchBar()
     let tableView = UITableView()
-    private let refreshControl = UIRefreshControl()
+    let refreshControl = UIRefreshControl()
 
     init(
         service: SearchService,
@@ -132,130 +137,6 @@ class SearchViewController: UIViewController {
     }
 }
 
-// MARK: - Search flow
-
-extension SearchViewController {
-    private func search(query: String) {
-        let normalizedQuery = query.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        guard !normalizedQuery.isEmpty else {
-            clearSearchResults()
-            return
-        }
-
-        let cancellationToken = beginSearch(for: normalizedQuery)
-        service.search(
-            query: normalizedQuery,
-            continuation: nil,
-            cancellationToken: cancellationToken
-        ) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self else {
-                    return
-                }
-                guard self.shouldApplyResult(
-                    for: normalizedQuery,
-                    cancellationToken: cancellationToken
-                ) else {
-                    return
-                }
-                self.applySearchResult(result, append: false)
-            }
-        }
-    }
-
-    func loadNextPage() {
-        guard let token = continuationToken,
-              !isLoadingNextPage,
-              !lastQuery.isEmpty else {
-            return
-        }
-        isLoadingNextPage = true
-        let query = lastQuery
-        let cancellationToken = searchCancellationToken
-        service.search(
-            query: query,
-            continuation: token,
-            cancellationToken: cancellationToken
-        ) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self else {
-                    return
-                }
-                self.isLoadingNextPage = false
-                guard self.shouldApplyResult(
-                    for: query,
-                    cancellationToken: cancellationToken
-                ) else {
-                    return
-                }
-                self.applySearchResult(result, append: true)
-            }
-        }
-    }
-
-    private func beginSearch(for query: String) -> CancellationToken {
-        searchCancellationToken.cancel()
-        let cancellationToken = CancellationToken()
-        searchCancellationToken = cancellationToken
-        lastQuery = query
-        activeSearchQuery = query
-        return cancellationToken
-    }
-
-    private func applySearchResult(
-        _ result: Result<SearchPage, Error>,
-        append: Bool
-    ) {
-        refreshControl.endRefreshing()
-        switch result {
-        case .success(let page):
-            results = append ? results + page.videos : page.videos
-            continuationToken = page.continuation
-            tableView.reloadData()
-        case .failure(let error):
-            // Silently keep the current page when a next-page load fails.
-            if !append {
-                presentSearchError(error)
-            }
-        }
-    }
-
-    private func presentSearchError(_ error: Error) {
-        let alert = UIAlertController(
-            title: "Error",
-            message: error.localizedDescription,
-            preferredStyle: .alert
-        )
-        alert.addAction(
-            UIAlertAction(title: "OK", style: .default)
-        )
-        present(alert, animated: true)
-    }
-
-    private func shouldApplyResult(
-        for query: String,
-        cancellationToken: CancellationToken
-    ) -> Bool {
-        searchCancellationToken === cancellationToken
-            && activeSearchQuery == query
-            && !cancellationToken.isCancelled
-    }
-
-    private func clearSearchResults() {
-        searchCancellationToken.cancel()
-        searchCancellationToken = CancellationToken()
-        activeSearchQuery = nil
-        lastQuery = ""
-        results = []
-        continuationToken = nil
-        isLoadingNextPage = false
-        refreshControl.endRefreshing()
-        tableView.reloadData()
-    }
-}
-
 // MARK: - UISearchBarDelegate
 
 extension SearchViewController: UISearchBarDelegate {
@@ -267,6 +148,20 @@ extension SearchViewController: UISearchBarDelegate {
         search(query: query)
     }
 
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(true, animated: true)
+        updatePanel(for: searchBar.text ?? "")
+    }
+
+    func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(false, animated: true)
+        setPanel(.hidden)
+    }
+
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+    }
+
     func searchBar(
         _ searchBar: UISearchBar,
         textDidChange searchText: String
@@ -274,5 +169,6 @@ extension SearchViewController: UISearchBarDelegate {
         if searchText.isEmpty {
             clearSearchResults()
         }
+        updatePanel(for: searchText)
     }
 }

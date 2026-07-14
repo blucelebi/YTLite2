@@ -1,19 +1,34 @@
 import UIKit
 
-// MARK: - Results table
+// MARK: - Results / panel table
 
 extension SearchViewController: UITableViewDataSource {
+    private static let panelCellId = "SearchPanelCell"
+    private static let panelRowHeight: CGFloat = 44
+
     func tableView(
         _ tableView: UITableView,
         numberOfRowsInSection section: Int
     ) -> Int {
-        results.count
+        panelMode == .hidden ? results.count : panelItems.count
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        titleForHeaderInSection section: Int
+    ) -> String? {
+        panelMode == .history && !panelItems.isEmpty
+            ? "Recent searches"
+            : nil
     }
 
     func tableView(
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
+        if panelMode != .hidden {
+            return panelCell(tableView, indexPath: indexPath)
+        }
         guard let cell = tableView.dequeueReusableCell(
             withIdentifier: SubscriptionVideoCell.reuseId,
             for: indexPath
@@ -39,6 +54,43 @@ extension SearchViewController: UITableViewDataSource {
         }
         return cell
     }
+
+    private func panelCell(
+        _ tableView: UITableView,
+        indexPath: IndexPath
+    ) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(
+            withIdentifier: Self.panelCellId
+        ) ?? UITableViewCell(
+            style: .default,
+            reuseIdentifier: Self.panelCellId
+        )
+        let theme = ThemeManager.shared
+        cell.backgroundColor = theme.background
+        cell.textLabel?.textColor = theme.primaryText
+        cell.textLabel?.font = .systemFont(ofSize: 15)
+        cell.textLabel?.text = panelItems[indexPath.row]
+        return cell
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        canEditRowAt indexPath: IndexPath
+    ) -> Bool {
+        panelMode == .history
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        commit editingStyle: UITableViewCell.EditingStyle,
+        forRowAt indexPath: IndexPath
+    ) {
+        guard panelMode == .history,
+              editingStyle == .delete else {
+            return
+        }
+        removeHistoryItem(at: indexPath.row)
+    }
 }
 
 extension SearchViewController: UITableViewDelegate {
@@ -46,8 +98,22 @@ extension SearchViewController: UITableViewDelegate {
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
     ) {
+        if panelMode != .hidden {
+            tableView.deselectRow(at: indexPath, animated: true)
+            executePanelQuery(panelItems[indexPath.row])
+            return
+        }
         let video = results[indexPath.row]
         videoRouter.open(video: video, from: self)
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        heightForRowAt indexPath: IndexPath
+    ) -> CGFloat {
+        panelMode == .hidden
+            ? UITableView.automaticDimension
+            : Self.panelRowHeight
     }
 
     func tableView(
@@ -55,7 +121,8 @@ extension SearchViewController: UITableViewDelegate {
         willDisplay cell: UITableViewCell,
         forRowAt indexPath: IndexPath
     ) {
-        guard indexPath.row >= results.count - 4 else {
+        guard panelMode == .hidden,
+              indexPath.row >= results.count - 4 else {
             return
         }
         loadNextPage()

@@ -42,6 +42,10 @@ enum UserDefaultsKeys {
         static let showShorts = "feed_showShorts"
     }
 
+    enum Search {
+        static let history = "search_history"
+    }
+
     enum Player {
         static let backgroundPlayback = "player_backgroundPlayback"
         static let pipEnabled = "player_pipEnabled"
