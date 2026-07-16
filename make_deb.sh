@@ -18,8 +18,9 @@ APP_NAME="YTLite"
 PROJECT="YTLite.xcodeproj"
 SCHEME="YTVLite"
 PACKAGE_ID="com.verback.ytlite"
-HOMEPAGE="https://github.com/verback2308/YTLite"
-ICON_URL="https://raw.githubusercontent.com/verback2308/YTLite/main/source/icon.png"
+HOMEPAGE="https://github.com/verback2308/ytlite"
+ICON_URL="https://raw.githubusercontent.com/verback2308/ytlite/main/source/icon.png"
+REPO_URL="https://verback2308.github.io/ytlite/"
 
 if [ -z "${APP_PATH:-}" ]; then
   BUILD_DIR=$(xcodebuild \
@@ -66,6 +67,8 @@ Maintainer: verback2308
 Author: verback2308
 Homepage: $HOMEPAGE
 Icon: $ICON_URL
+Depiction: $REPO_URL
+SileoDepiction: ${REPO_URL}depiction.json
 Description: Lightweight YouTube client for iOS 12+
  SponsorBlock, Return YouTube Dislike, up to 1080p playback, background
  audio, PiP, subtitles. No ads, no tracking, no dependencies.

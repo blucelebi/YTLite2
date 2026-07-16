@@ -3,9 +3,15 @@
 
 Usage:
     make_repo.py --debs DIR --out DIR [--repo-url URL]
+                 [--screenshots DIR] [--changelog FILE]
 
 Copies the debs to OUT/debs/ and writes Packages, Packages.gz, Packages.bz2,
-Release and index.html to OUT/. Stdlib only — no dpkg/apt tooling required.
+Release, depiction.json and index.html to OUT/. Stdlib only — no dpkg/apt
+tooling required.
+
+--screenshots: directory of images to show on the Sileo package page.
+--changelog: JSON Lines file, one {"tag": ..., "body": ...} object per line
+(GitHub release notes; body is markdown).
 """
 
 import argparse
@@ -13,6 +19,8 @@ import bz2
 import gzip
 import hashlib
 import io
+import json
+import lzma
 import shutil
 import tarfile
 from pathlib import Path
@@ -62,9 +70,14 @@ def version_key(version):
     return tuple(int(part) if part.isdigit() else 0 for part in version.split("."))
 
 
-def package_stanza(deb_path, control_text):
+def package_stanza(deb_path, control_text, repo_url):
     data = deb_path.read_bytes()
     stanza = control_text.strip()
+    # Older debs were built before these fields existed in control —
+    # inject them at repo level so their Sileo pages get depictions too.
+    if "SileoDepiction:" not in stanza:
+        stanza += f"\nDepiction: {repo_url}"
+        stanza += f"\nSileoDepiction: {repo_url}depiction.json"
     stanza += f"\nFilename: debs/{deb_path.name}"
     stanza += f"\nSize: {len(data)}"
     stanza += f"\nMD5sum: {hashlib.md5(data).hexdigest()}"
@@ -91,6 +104,87 @@ def release_file(out_dir, index_names):
             digest = hashlib.new(algo, data).hexdigest()
             lines.append(f" {digest} {len(data)} {name}")
     return "\n".join(lines) + "\n"
+
+
+DESCRIPTION_MD = """A lightweight YouTube client for iOS 12+. No ads, no tracking, \
+no dependencies.
+
+- SponsorBlock
+- Return YouTube Dislike
+- Up to 1080p playback
+- Background audio and Picture in Picture
+- Subtitles
+"""
+
+
+def depiction_json(repo_url, screenshot_names, changelog):
+    """Native Sileo depiction (also rendered by Zebra)."""
+    details = [
+        {"class": "DepictionSubheaderView", "title": "Lightweight YouTube client for iOS 12+"},
+        {"class": "DepictionMarkdownView", "markdown": DESCRIPTION_MD},
+    ]
+    if screenshot_names:
+        details.append(
+            {
+                "class": "DepictionScreenshotsView",
+                "itemCornerRadius": 8,
+                "itemSize": "{160, 348}",
+                "screenshots": [
+                    {
+                        "url": f"{repo_url}screenshots/{name}",
+                        "accessibilityText": Path(name).stem,
+                    }
+                    for name in screenshot_names
+                ],
+            }
+        )
+    details.append(
+        {
+            "class": "DepictionTableButtonView",
+            "title": "GitHub",
+            "action": "https://github.com/verback2308/ytlite",
+            "openExternal": True,
+        }
+    )
+
+    log = []
+    for entry in changelog:
+        log.append(
+            {"class": "DepictionSubheaderView", "useBoldText": True, "title": entry["tag"]}
+        )
+        log.append(
+            {
+                "class": "DepictionMarkdownView",
+                "markdown": entry["body"] or "No notes for this release.",
+            }
+        )
+    if not log:
+        log = [
+            {
+                "class": "DepictionMarkdownView",
+                "markdown": "See [GitHub releases]"
+                "(https://github.com/verback2308/ytlite/releases).",
+            }
+        ]
+
+    return {
+        "minVersion": "0.1",
+        "class": "DepictionTabView",
+        "tintColor": "#ff0000",
+        "tabs": [
+            {"tabname": "Details", "class": "DepictionStackView", "views": details},
+            {"tabname": "Changelog", "class": "DepictionStackView", "views": log},
+        ],
+    }
+
+
+def load_changelog(path):
+    entries = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            entries.append(json.loads(line))
+    entries.sort(key=lambda entry: version_key(entry["tag"]), reverse=True)
+    return entries
 
 
 ARCH_LABELS = {"iphoneos-arm": "rootful", "iphoneos-arm64": "rootless"}
@@ -155,6 +249,8 @@ def main():
     # Must be all-lowercase: Sileo/Cydia lowercase user-entered source URLs
     # and GitHub Pages paths are case-sensitive.
     parser.add_argument("--repo-url", default="https://verback2308.github.io/ytlite/")
+    parser.add_argument("--screenshots", type=Path, help="directory of package-page images")
+    parser.add_argument("--changelog", type=Path, help="JSON Lines file of {tag, body}")
     args = parser.parse_args()
 
     debs = sorted(args.debs.glob("*.deb"))
@@ -172,19 +268,32 @@ def main():
     for deb, _, _ in parsed:
         shutil.copy2(deb, debs_out / deb.name)
 
-    packages = "\n".join(package_stanza(deb, text) for deb, text, _ in parsed)
+    packages = "\n".join(package_stanza(deb, text, args.repo_url) for deb, text, _ in parsed)
     packages_bytes = packages.encode("utf-8")
     (args.out / "Packages").write_bytes(packages_bytes)
     # mtime=0 keeps the .gz byte-identical across runs for the same input
     (args.out / "Packages.gz").write_bytes(gzip.compress(packages_bytes, mtime=0))
     (args.out / "Packages.bz2").write_bytes(bz2.compress(packages_bytes))
+    (args.out / "Packages.xz").write_bytes(lzma.compress(packages_bytes))
 
-    index_names = ["Packages", "Packages.gz", "Packages.bz2"]
+    index_names = ["Packages", "Packages.gz", "Packages.bz2", "Packages.xz"]
     entries = [
         (fields["Version"], fields["Architecture"], deb.name) for deb, _, fields in parsed
     ]
     (args.out / "Release").write_text(release_file(args.out, index_names))
     (args.out / "index.html").write_text(index_html(args.repo_url, entries))
+
+    screenshot_names = []
+    if args.screenshots:
+        shots_out = args.out / "screenshots"
+        shots_out.mkdir(exist_ok=True)
+        for image in sorted(args.screenshots.iterdir()):
+            if image.suffix.lower() in (".jpeg", ".jpg", ".png"):
+                shutil.copy2(image, shots_out / image.name)
+                screenshot_names.append(image.name)
+    changelog = load_changelog(args.changelog) if args.changelog else []
+    depiction = depiction_json(args.repo_url, screenshot_names, changelog)
+    (args.out / "depiction.json").write_text(json.dumps(depiction, indent=1))
 
     print(f"Repo written to {args.out} ({len(debs)} package(s))")
 
