@@ -105,6 +105,27 @@ extension WatchViewController {
         }
     }
 
+    func beginNowPlayingSession(duration: Double) {
+        guard let player = videoPlayerView?.player else {
+            return
+        }
+        NowPlayingService.shared.beginSession(
+            player: player,
+            metadata: NowPlayingMetadata(
+                title: initialVideo.title,
+                channelName: initialVideo.channelName,
+                duration: duration,
+                artworkURL: URL(string: initialVideo.thumbnailURL)
+            ),
+            onNext: { [weak self] in
+                self?.playNextFromRemote()
+            },
+            onPrevious: { [weak self] in
+                self?.previousFromRemote()
+            }
+        )
+    }
+
     func resetPlaybackSurfaces() {
         videoPlayerView?.player?.pause()
         if let existing =

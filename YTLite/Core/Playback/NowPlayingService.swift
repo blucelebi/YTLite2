@@ -15,6 +15,8 @@ final class NowPlayingService {
     static let shared = NowPlayingService()
 
     private weak var player: AVPlayer?
+    private var onNextTrack: (() -> Void)?
+    private var onPreviousTrack: (() -> Void)?
     private var commandTokens: [(MPRemoteCommand, Any)] = []
     private var artworkURL: URL?
     private var lastPublishedPosition: TimeInterval = -1
@@ -26,9 +28,13 @@ final class NowPlayingService {
 
     func beginSession(
         player: AVPlayer,
-        metadata: NowPlayingMetadata
+        metadata: NowPlayingMetadata,
+        onNext: (() -> Void)? = nil,
+        onPrevious: (() -> Void)? = nil
     ) {
         self.player = player
+        onNextTrack = onNext
+        onPreviousTrack = onPrevious
         lastPublishedPosition = 0
         publishInfo(metadata: metadata, position: 0)
         registerCommands()
@@ -55,6 +61,8 @@ final class NowPlayingService {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         removeCommands()
         player = nil
+        onNextTrack = nil
+        onPreviousTrack = nil
         artworkURL = nil
     }
 
@@ -111,6 +119,30 @@ final class NowPlayingService {
         let center = MPRemoteCommandCenter.shared()
         registerPlayPauseCommands(center)
         registerSeekCommand(center)
+        registerTrackCommands(center)
+    }
+
+    /// Next/previous (Control Center, lock screen, AirPods). Commands with
+    /// no handler stay disabled so the buttons render greyed out.
+    private func registerTrackCommands(
+        _ center: MPRemoteCommandCenter
+    ) {
+        if onNextTrack != nil {
+            add(center.nextTrackCommand) { [weak self] _ in
+                self?.onNextTrack?()
+                return .success
+            }
+        } else {
+            center.nextTrackCommand.isEnabled = false
+        }
+        if onPreviousTrack != nil {
+            add(center.previousTrackCommand) { [weak self] _ in
+                self?.onPreviousTrack?()
+                return .success
+            }
+        } else {
+            center.previousTrackCommand.isEnabled = false
+        }
     }
 
     private func registerPlayPauseCommands(

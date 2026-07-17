@@ -72,6 +72,43 @@ extension WatchViewController {
         ])
     }
 
+    /// Control Center / AirPods "next": queue entry first, else the top
+    /// suggestion — always instant, never the countdown overlay.
+    func playNextFromRemote() {
+        dismissAutoplayOverlay()
+        if let next = queue.nextVideo {
+            AppLog.player("remote next: queue \(next.id)")
+            navigateTo(next)
+            return
+        }
+        guard let suggestion = watchPage?.nextVideo else {
+            AppLog.player("remote next: nothing to play")
+            return
+        }
+        AppLog.player("remote next: suggestion \(suggestion.id)")
+        navigateTo(suggestion)
+    }
+
+    /// Control Center / AirPods "previous": the session's own back stack
+    /// (`videoHistory`, same as the nav-bar back button). On a mix the
+    /// reloaded watch page re-syncs the queue to the earlier position.
+    /// With no history left, restart the video — the standard fallback.
+    func previousFromRemote() {
+        dismissAutoplayOverlay()
+        guard videoHistory.isEmpty else {
+            AppLog.player("remote previous: history back")
+            goBack()
+            return
+        }
+        AppLog.player("remote previous: restart")
+        videoPlayerView?.player?.seek(
+            to: .zero,
+            toleranceBefore: .zero,
+            toleranceAfter: .zero
+        )
+        videoPlayerView?.player?.play()
+    }
+
     func dismissAutoplayOverlay() {
         guard let overlay = autoplayOverlay else {
             return
